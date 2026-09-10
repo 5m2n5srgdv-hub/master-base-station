@@ -1,0 +1,23 @@
+2022-02-23T03:08:51,446 INFO  [com.dmm.Main] [main] start dmmgameplayer process.
+2022-02-23T03:08:51,476 INFO  [com.dmm.DMMApplication] [main] arg::selfupdate
+2022-02-23T03:08:51,476 INFO  [com.dmm.DMMApplication] [main] arg::19824
+2022-02-23T03:08:51,476 INFO  [com.dmm.DMMApplication] [main] arg::C:\Program Files (x86)\DMMGamePlayer
+2022-02-23T03:08:51,476 INFO  [com.dmm.DMMApplication] [main] Self Update is in Progress.
+2022-02-23T03:08:51,476 INFO  [dmm.bootoptions.SelfUpdate] [main] STEP1   --> Shut down old player process start.
+2022-02-23T03:08:51,476 INFO  [dmm.bootoptions.SelfUpdate] [main] Self Update: Shut down DMM GamePlayer of Process 19824
+2022-02-23T03:08:51,626 INFO  [system.selfupdate.DMMGamePlayerBoot] [main] DMMGamePlayer is shutting down. PID was 19824
+2022-02-23T03:08:51,626 INFO  [dmm.bootoptions.SelfUpdate] [main] STEP2   --> New DMM GAME PLAYER copy start.
+2022-02-23T03:08:51,626 INFO  [dmm.bootoptions.SelfUpdate] [main] Self Update : Copy Temp Library files.
+2022-02-23T03:08:51,627 INFO  [system.selfupdate.DMMGamePlayerUpdate] [main] Update DMM Game Player @C:\Program Files (x86)\DMMGamePlayer. Copy from C:\Users\harus\AppData\Local\Temp\com.dmm
+2022-02-23T03:08:51,634 INFO  [system.selfupdate.DMMGamePlayerUpdate] [main] Checking Files to Update.
+2022-02-23T03:08:51,645 ERROR [system.selfupdate.DMMGamePlayerUpdate] [main] C:\Program Files (x86)\DMMGamePlayer\DMMGamePlayer.exe
+java.nio.file.AccessDeniedException: C:\Program Files (x86)\DMMGamePlayer\DMMGamePlayer.exe
+	at sun.nio.fs.WindowsFileSystemProvider.implDelete(Unknown Source) ~[?:?]
+	at sun.nio.fs.AbstractFileSystemProvider.deleteIfExists(Unknown Source) ~[?:?]
+	at java.nio.file.Files.<unknown>(Unknown Source) ~[?:?]
+	at com.dmm.system.selfupdate.DMMGamePlayerUpdate.deleteUpdatingFiles(Unknown Source) ~[DMMGamePlayer-1.0.0.jar:?]
+	at com.dmm.system.selfupdate.DMMGamePlayerUpdate.updateDMMGamePlayerLibraries(Unknown Source) [DMMGamePlayer-1.0.0.jar:?]
+	at com.dmm.bootoptions.SelfUpdate.update(Unknown Source) [DMMGamePlayer-1.0.0.jar:?]
+	at com.dmm.DMMApplication.updateSelf(Unknown Source) [DMMGamePlayer-1.0.0.jar:?]
+	at com.dmm.Main.main(Unknown Source) [DMMGamePlayer-1.0.0.jar:?]
+2022-02-23T03:08:51,661 INFO  [dmm.bootoptions.SelfUpdate] [main] STEP2   --> Failed New DMM GAME PLAYER copy end.
