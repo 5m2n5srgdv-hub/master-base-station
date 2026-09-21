@@ -38,10 +38,10 @@ const CATEGORIES = [
 { key: "sex", label: "SEX" },
 ];
 
-const WEEK_COLORS = [210, 150, 20, 320, 265];
+const WEEK_COLORS = [180, 210, 270, 320, 38];
 
 const WEEKDAYS = ["日", "月", "火", "水", "木", "金", "土"];
-const STORAGE_KEY = "entries-v3";
+const STORAGE_KEY = "entries-v3-dark";
 const MAX_DOTS = 4;
 const MAX_RADAR_WEEKS = 4;
 
@@ -75,13 +75,13 @@ if (vals.length === 0) return null;
 return vals.reduce((a, b) => a + b, 0) / vals.length;
 }
 
-// 0(冷)→10(熱) を hsl で補間
+// 0(冷)→10(熱) を ダークモード映えする hsl で補間
 function heatColor(avg) {
-if (avg === null || avg === undefined) return "#d0d0d5";
+if (avg === null || avg === undefined) return "#3a3f4b";
 const t = Math.max(0, Math.min(10, avg)) / 10;
-const hue = 210 - t * 195; // 210(青) → 15(琥珀)
-const sat = 55 + t * 25;
-const light = 55 - t * 8;
+const hue = 190 - t * 175; // 190(シアン) → 15(オレンジ)
+const sat = 70 + t * 15;
+const light = 50 + t * 5;
 return `hsl(${hue.toFixed(0)}, ${sat.toFixed(0)}%, ${light.toFixed(0)}%)`;
 }
 
@@ -131,7 +131,7 @@ export default function App() {
 const today = new Date();
 const [viewYear, setViewYear] = useState(today.getFullYear());
 const [viewMonth, setViewMonth] = useState(today.getMonth());
-const [entries, setEntries] = useState({}); // { "YYYY-MM-DD": [ {id, ts, name, category, ...metrics} ] }
+const [entries, setEntries] = useState({});
 const [loading, setLoading] = useState(true);
 const [privacyMode, setPrivacyMode] = useState(false);
 
@@ -148,45 +148,38 @@ const fileInputRef = useRef(null);
 
 const weeks = useMemo(() => buildMonthMatrix(viewYear, viewMonth), [viewYear, viewMonth]);
 
-// 初回読み込み
 useEffect(() => {
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      setEntries(parsed && typeof parsed === "object" ? parsed : {});
-    } else {
-      setEntries({});
-    }
-  } catch (e) {
-    console.error("データの読み込みに失敗しました:", e);
-    setEntries({});
-  } finally {
-    setLoading(false);
-  }
+try {
+const saved = localStorage.getItem(STORAGE_KEY);
+if (saved) {
+const parsed = JSON.parse(saved);
+setEntries(parsed && typeof parsed === "object" ? parsed : {});
+} else {
+setEntries({});
+}
+} catch (e) {
+console.error("データの読み込みに失敗しました:", e);
+setEntries({});
+} finally {
+setLoading(false);
+}
 }, []);
 
 const persist = useCallback((next) => {
-  setSaveState("saving");
-
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-
-    setSaveState("saved");
-    setStorageError(false);
-
-    setTimeout(() => {
-      setSaveState("idle");
-    }, 1000);
-  } catch (e) {
-    console.error("データの保存に失敗しました:", e);
-    setStorageError(true);
-    setSaveState("idle");
-  }
+setSaveState("saving");
+try {
+localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+setSaveState("saved");
+setStorageError(false);
+setTimeout(() => {
+setSaveState("idle");
+}, 1000);
+} catch (e) {
+console.error("データの保存に失敗しました:", e);
+setStorageError(true);
+setSaveState("idle");
+}
 }, []);
-
-// ---- 日付選択(タップでトグル) ----
 
 const toggleDay = (date) => {
 if (!date) return;
@@ -194,8 +187,6 @@ const key = formatDateKey(date);
 setShowHelp(false);
 setSelectedDateKey((cur) => (cur === key ? null : key));
 };
-
-// ---- 編集ドロワー操作 ----
 
 const openNewEntry = () => {
 if (!selectedDateKey) return;
@@ -256,8 +247,6 @@ setViewMonth(0);
 } else setViewMonth((m) => m + 1);
 };
 
-// ---- バックアップ(エクスポート/インポート) ----
-
 const handleExport = () => {
 const today8 = formatDateKey(new Date()).replace(/-/g, "");
 downloadJson(`calendar-backup-${today8}.json`, { version: 1, exportedAt: new Date().toISOString(), entries });
@@ -279,7 +268,6 @@ const parsed = JSON.parse(String(reader.result));
 const incoming = parsed && parsed.entries ? parsed.entries : parsed;
 if (!incoming || typeof incoming !== "object") throw new Error("invalid");
 
-// 既存データとマージ(同じIDの記録は上書き、それ以外は追加)
 const merged = { ...entries };
 let importedCount = 0;
 Object.entries(incoming).forEach(([dateKey, list]) => {
@@ -309,7 +297,6 @@ reader.readAsText(file);
 e.target.value = "";
 };
 
-// 週次データ(直近 MAX_RADAR_WEEKS 週、entry単位で平均)→ レーダーチャート用に整形
 const radarInfo = useMemo(() => {
 const byWeek = {};
 Object.values(entries).forEach((list) => {
@@ -352,7 +339,6 @@ return `${d.getMonth() + 1}月${d.getDate()}日(${WEEKDAYS[d.getDay()]})`;
 })()
 : "";
 
-// 選択中の日の統計(項目ごとの平均、全体平均)
 const dayStats = useMemo(() => {
 if (selectedList.length === 0) return null;
 const perMetric = {};
@@ -367,43 +353,27 @@ return { perMetric, overall };
 
 return (
 <div className="ic-root">
-
 <style>{`
 @import url('https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;600;700&display=swap');
 
 /* =========================================================
-全体
+全体（B：モダン・ダークモード仕様）
 ========================================================= */
-
 .ic-root {
---bg: #f5f6f8;
---card: rgba(255,255,255,0.92);
---card-solid: #ffffff;
---panel: #f1f2f5;
---line: #e5e7eb;
---text: #17181c;
---text-dim: #8b8e98;
---accent: #3478f6;
---accent-light: #eaf2ff;
---danger: #ff453a;
---shadow: 0 8px 30px rgba(20, 25, 35, 0.06);
+--bg: #0d1117;
+--card: #161b22;
+--card-solid: #161b22;
+--panel: #21262d;
+--line: #30363d;
+--text: #f0f6fc;
+--text-dim: #8b949e;
+--accent: #2dd4bf;
+--accent-light: rgba(45, 212, 191, 0.12);
+--danger: #f87171;
+--shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
 
-font-family:
-'Zen Kaku Gothic New',
--apple-system,
-BlinkMacSystemFont,
-'Hiragino Sans',
-'Yu Gothic',
-sans-serif;
-
-background:
-linear-gradient(
-180deg,
-#f8f9fb 0%,
-#f5f6f8 45%,
-#f3f4f6 100%
-);
-
+font-family: 'Zen Kaku Gothic New', -apple-system, BlinkMacSystemFont, sans-serif;
+background: var(--bg);
 color: var(--text);
 min-height: 100vh;
 width: 100%;
@@ -418,66 +388,54 @@ position: relative;
 box-sizing: border-box;
 }
 
-button,
-input {
+button, input {
 font-family: inherit;
 }
-
 
 /* =========================================================
 ヘッダー
 ========================================================= */
-
 .ic-header {
 display: flex;
 align-items: center;
 justify-content: space-between;
-margin-bottom: 14px;
-padding: 2px 2px;
+margin-bottom: 16px;
+padding: 0 4px;
 }
 
 .ic-nav {
 display: flex;
 align-items: center;
-gap: 2px;
+gap: 4px;
 }
 
 .ic-nav-btn {
-width: 34px;
-height: 34px;
-border: none;
-background: transparent;
+width: 36px;
+height: 36px;
+border: 1px solid var(--line);
+background: var(--card);
 color: var(--text-dim);
-border-radius: 50%;
-padding: 0;
+border-radius: 10px;
 cursor: pointer;
-
 display: flex;
 align-items: center;
 justify-content: center;
-
-transition:
-background 0.15s ease,
-color 0.15s ease,
-transform 0.1s ease;
+transition: all 0.15s ease;
 }
 
 .ic-nav-btn:hover {
-background: #e9ebef;
+background: var(--panel);
 color: var(--text);
-}
-
-.ic-nav-btn:active {
-transform: scale(0.9);
-color: var(--accent);
+border-color: #484f58;
 }
 
 .ic-month {
-font-size: 21px;
+font-size: 20px;
 font-weight: 700;
 letter-spacing: -0.4px;
 min-width: 122px;
 text-align: center;
+color: var(--text);
 }
 
 .ic-header-actions {
@@ -486,71 +444,39 @@ gap: 6px;
 }
 
 .ic-icon-round {
-background: rgba(255,255,255,0.9);
-border: 1px solid #e4e6ea;
-color: #777b86;
-border-radius: 12px;
+background: var(--card);
+border: 1px solid var(--line);
+color: var(--text-dim);
+border-radius: 10px;
 width: 36px;
 height: 36px;
-
 display: flex;
 align-items: center;
 justify-content: center;
-
 cursor: pointer;
-
-box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-
-transition:
-background 0.15s ease,
-color 0.15s ease,
-transform 0.1s ease;
+transition: all 0.15s ease;
 }
 
 .ic-icon-round:hover {
-background: #fff;
+background: var(--panel);
 color: var(--accent);
+border-color: var(--accent);
 }
-
-.ic-icon-round:active {
-transform: scale(0.92);
-}
-
 
 /* =========================================================
-バックアップメッセージ
+通知・プライバシー
 ========================================================= */
-
 .ic-backup-toast {
 background: var(--accent-light);
 color: var(--accent);
+border: 1px solid rgba(45, 212, 191, 0.3);
 border-radius: 10px;
 padding: 7px 10px;
-margin: 0 auto 10px;
+margin: 0 auto 12px;
 width: fit-content;
-
 font-size: 11px;
 font-weight: 600;
-
-animation: ic-toast-in 0.2s ease;
 }
-
-@keyframes ic-toast-in {
-from {
-opacity: 0;
-transform: translateY(-4px);
-}
-
-to {
-opacity: 1;
-transform: translateY(0);
-}
-}
-
-
-/* =========================================================
-プライバシーモード
-========================================================= */
 
 .ic-blurred {
 filter: blur(14px);
@@ -558,142 +484,85 @@ pointer-events: none;
 user-select: none;
 }
 
-
 /* =========================================================
-曜日
+カレンダー周り
 ========================================================= */
-
 .ic-weekday-row {
 display: grid;
 grid-template-columns: repeat(7, 1fr);
-
-background: rgba(255,255,255,0.7);
-
+background: var(--card);
 border: 1px solid var(--line);
 border-bottom: none;
-
 border-radius: 14px 14px 0 0;
-
-padding: 8px 4px 7px;
+padding: 10px 4px;
 }
 
 .ic-weekday {
 text-align: center;
 font-size: 11px;
 font-weight: 600;
-color: #777b84;
+color: var(--text-dim);
 }
 
-.ic-weekday.ic-sun {
-color: #ff453a;
-}
-
-.ic-weekday.ic-sat {
-color: #3478f6;
-}
-
-
-/* =========================================================
-カレンダー
-========================================================= */
+.ic-weekday.ic-sun { color: #f87171; }
+.ic-weekday.ic-sat { color: #60a5fa; }
 
 .ic-grid {
 display: grid;
 grid-template-columns: repeat(7, 1fr);
-
-background: rgba(255,255,255,0.82);
-
+background: var(--card);
 border-left: 1px solid var(--line);
 border-top: 1px solid var(--line);
-
-overflow: hidden;
-
 border-radius: 0 0 14px 14px;
-
+overflow: hidden;
 box-shadow: var(--shadow);
 }
 
 .ic-cell {
-min-height: 72px;
-
+min-height: 75px;
 border-right: 1px solid var(--line);
 border-bottom: 1px solid var(--line);
-
-padding: 7px 3px 6px;
-
+padding: 6px 2px;
 cursor: pointer;
-
 display: flex;
 flex-direction: column;
 align-items: center;
-
-background: rgba(255,255,255,0.75);
-
-transition:
-background 0.12s ease,
-transform 0.1s ease;
+background: rgba(22, 27, 34, 0.6);
+transition: background 0.12s ease;
 }
 
 .ic-cell:hover {
-background: #f7faff;
-}
-
-.ic-cell:active {
-transform: scale(0.98);
-}
-
-.ic-cell:nth-child(7n) {
-border-right: none;
+background: var(--panel);
 }
 
 .ic-cell.ic-empty {
 cursor: default;
-background: #fafafa;
-}
-
-.ic-cell.ic-empty:active {
-transform: none;
+background: #0d1117;
 }
 
 .ic-cell.ic-selected {
-background: #edf4ff;
+background: rgba(45, 212, 191, 0.08);
 }
 
 .ic-cell-day {
 font-size: 13px;
 font-weight: 600;
-
-width: 27px;
-height: 27px;
-
+width: 26px;
+height: 26px;
 display: flex;
 align-items: center;
 justify-content: center;
-
 border-radius: 50%;
-
 color: var(--text);
-
-transition:
-background 0.15s ease,
-color 0.15s ease,
-border 0.15s ease;
 }
 
-.ic-cell-day.ic-sun {
-color: #ff453a;
-}
-
-.ic-cell-day.ic-sat {
-color: #3478f6;
-}
+.ic-cell-day.ic-sun { color: #f87171; }
+.ic-cell-day.ic-sat { color: #60a5fa; }
 
 .ic-cell-day.ic-today {
 background: var(--accent);
-color: white;
-
-box-shadow:
-0 3px 9px rgba(52,120,246,0.28);
+color: #0d1117;
+font-weight: 700;
 }
 
 .ic-cell-day.ic-selected-day {
@@ -702,132 +571,68 @@ color: var(--accent);
 }
 
 .ic-cell-day.ic-selected-day.ic-today {
-color: white;
-border-color: var(--accent);
+color: #0d1117;
+background: var(--accent);
 }
-
-
-/* =========================================================
-カレンダーの記録ドット
-========================================================= */
 
 .ic-dots {
 display: flex;
-gap: 4px;
-
+gap: 3px;
 margin-top: 6px;
-
 flex-wrap: wrap;
 justify-content: center;
-
 max-width: 42px;
 }
 
 .ic-dot {
-width: 7px;
-height: 7px;
-
+width: 6px;
+height: 6px;
 border-radius: 50%;
-
-box-shadow:
-0 1px 3px rgba(0,0,0,0.15);
-
-transition: transform 0.15s ease;
-}
-
-.ic-dot:hover {
-transform: scale(1.25);
 }
 
 .ic-dot-more {
-font-size: 9px;
-font-weight: 600;
+font-size: 8px;
 color: var(--text-dim);
-line-height: 7px;
 }
-
-
-/* =========================================================
-カレンダー凡例
-========================================================= */
 
 .ic-legend {
 display: flex;
 align-items: center;
-gap: 9px;
-
-margin: 11px 4px 0;
-
+gap: 10px;
+margin: 12px 4px 0;
 font-size: 10px;
-font-weight: 500;
-
 color: var(--text-dim);
 }
 
 .ic-legend-bar {
 flex: 1;
-height: 7px;
-
+height: 6px;
 border-radius: 10px;
-
-background:
-linear-gradient(
-90deg,
-hsl(210,55%,55%),
-hsl(170,65%,52%),
-hsl(90,65%,52%),
-hsl(45,75%,52%),
-hsl(15,80%,47%)
-);
-
-box-shadow:
-inset 0 0 0 1px rgba(0,0,0,0.03);
+background: linear-gradient(90deg, #38bdf8, #2dd4bf, #a3e635, #fbbf24, #f87171);
 }
-
 
 /* =========================================================
-選択日のパネル
+選択日の詳細パネル
 ========================================================= */
-
 .ic-day-panel {
 margin-top: 18px;
-
-background: rgba(255,255,255,0.92);
-
-border: 1px solid #e3e5e9;
-border-radius: 18px;
-
-padding: 15px;
-
+background: var(--card);
+border: 1px solid var(--line);
+border-radius: 16px;
+padding: 16px;
 box-shadow: var(--shadow);
-
-animation: ic-fade-in 0.18s ease;
-}
-
-@keyframes ic-fade-in {
-from {
-opacity: 0;
-transform: translateY(-5px);
-}
-
-to {
-opacity: 1;
-transform: translateY(0);
-}
 }
 
 .ic-day-panel-head {
 display: flex;
 justify-content: space-between;
 align-items: flex-start;
-
-margin-bottom: 13px;
+margin-bottom: 14px;
 }
 
 .ic-day-panel-title {
 font-size: 16px;
 font-weight: 700;
-letter-spacing: -0.2px;
 }
 
 .ic-day-panel-sub {
@@ -839,67 +644,42 @@ margin-top: 2px;
 .ic-help-btn {
 width: 32px;
 height: 32px;
-
 background: var(--panel);
-
-border: 1px solid #e5e6ea;
-
-color: #777b86;
-
+border: 1px solid var(--line);
+color: var(--text-dim);
 border-radius: 50%;
-
 cursor: pointer;
-
-padding: 0;
-
 display: flex;
 align-items: center;
 justify-content: center;
-
-transition:
-background 0.15s ease,
-color 0.15s ease;
+transition: all 0.15s ease;
 }
 
 .ic-help-btn:hover {
-background: var(--accent-light);
 color: var(--accent);
+border-color: var(--accent);
 }
 
-
-/* =========================================================
-ヘルプ
-========================================================= */
-
 .ic-help-box {
-background: #f8f9fb;
-
-border: 1px solid #e6e7eb;
-
-border-radius: 13px;
-
-padding: 9px 11px;
-
+background: var(--panel);
+border: 1px solid var(--line);
+border-radius: 12px;
+padding: 10px 12px;
 margin-bottom: 12px;
 }
 
 .ic-help-row {
 display: flex;
 align-items: flex-start;
-
 gap: 9px;
-
 padding: 6px 0;
 }
 
 .ic-help-dot {
 width: 8px;
 height: 8px;
-
 border-radius: 50%;
-
 margin-top: 4px;
-
 flex-shrink: 0;
 }
 
@@ -910,225 +690,111 @@ font-weight: 700;
 
 .ic-help-desc {
 font-size: 10px;
-line-height: 1.5;
-
 color: var(--text-dim);
-
 margin-top: 1px;
 }
 
-
-/* =========================================================
-その日の統計
-========================================================= */
-
 .ic-day-stats {
-background:
-linear-gradient(
-145deg,
-#ffffff,
-#f8f9fb
-);
-
-border: 1px solid #e5e6ea;
-
-border-radius: 14px;
-
-padding: 13px;
-
-margin-bottom: 13px;
-
-box-shadow:
-0 3px 12px rgba(20,25,35,0.035);
+background: var(--panel);
+border: 1px solid var(--line);
+border-radius: 12px;
+padding: 12px;
+margin-bottom: 14px;
 }
 
 .ic-day-stats-title {
 font-size: 11px;
 font-weight: 700;
-
-color: #777b84;
-
+color: var(--text-dim);
 margin-bottom: 10px;
 }
 
 .ic-stat-row {
 display: grid;
-
-grid-template-columns: 78px 1fr 38px;
-
+grid-template-columns: 85px 1fr 38px;
 align-items: center;
-
 gap: 8px;
-
 margin-bottom: 8px;
-
 font-size: 11px;
 }
 
 .ic-stat-bar-track {
-height: 7px;
-
+height: 6px;
 border-radius: 10px;
-
-background: #e9ebef;
-
+background: #30363d;
 overflow: hidden;
 }
 
 .ic-stat-bar-fill {
 height: 100%;
-
 border-radius: 10px;
-
-transition:
-width 0.25s ease;
 }
 
 .ic-stat-value {
 font-weight: 700;
-
 text-align: right;
-
-font-size: 11px;
 }
 
 .ic-stat-overall {
 display: flex;
-
 justify-content: flex-end;
 align-items: baseline;
-
-gap: 7px;
-
+gap: 6px;
 margin-top: 10px;
-
-padding-top: 9px;
-
-border-top: 1px solid #e8e9ec;
-
+padding-top: 8px;
+border-top: 1px solid var(--line);
 font-size: 11px;
-
 color: var(--text-dim);
 }
 
 .ic-stat-overall strong {
-font-size: 19px;
-letter-spacing: -0.5px;
+font-size: 18px;
+color: var(--accent);
 }
 
-
 /* =========================================================
-セクションタイトル
+カード・リスト
 ========================================================= */
-
 .ic-section-title {
 font-size: 15px;
 font-weight: 700;
-
-margin: 30px 3px 10px;
-
-letter-spacing: -0.2px;
-
+margin: 28px 4px 10px;
 display: flex;
 align-items: center;
-gap: 7px;
+gap: 8px;
+color: var(--text);
 }
 
 .ic-section-title::before {
 content: "";
-
 width: 4px;
-height: 17px;
-
+height: 16px;
 border-radius: 4px;
-
 background: var(--accent);
 }
-
-
-/* =========================================================
-レーダーチャート
-========================================================= */
-
-.ic-chart-wrap {
-background: rgba(255,255,255,0.92);
-
-border: 1px solid #e3e5e9;
-
-border-radius: 18px;
-
-padding: 14px 7px 7px;
-
-box-shadow: var(--shadow);
-
-overflow: hidden;
-}
-
-.ic-empty-msg {
-color: var(--text-dim);
-
-font-size: 12px;
-
-text-align: center;
-
-padding: 30px 10px;
-}
-
-
-/* =========================================================
-記録カード
-========================================================= */
 
 .ic-entry-card {
 display: flex;
 align-items: center;
-
 gap: 10px;
-
-background: #ffffff;
-
-border: 1px solid #e5e6ea;
-
-border-radius: 14px;
-
-padding: 11px 10px 11px 9px;
-
+background: var(--panel);
+border: 1px solid var(--line);
+border-radius: 12px;
+padding: 10px;
 margin-bottom: 8px;
-
 cursor: pointer;
-
-box-shadow:
-0 2px 8px rgba(20,25,35,0.035);
-
-transition:
-transform 0.12s ease,
-box-shadow 0.12s ease,
-border-color 0.12s ease;
+transition: all 0.15s ease;
 }
 
 .ic-entry-card:hover {
-border-color: #d4d9e2;
-
-box-shadow:
-0 5px 15px rgba(20,25,35,0.07);
-
-transform: translateY(-1px);
-}
-
-.ic-entry-card:active {
-transform: scale(0.985);
+border-color: var(--accent);
 }
 
 .ic-entry-bar {
-width: 5px;
-
+width: 4px;
 align-self: stretch;
-
-border-radius: 5px;
-
+border-radius: 4px;
 flex-shrink: 0;
-
-min-height: 38px;
 }
 
 .ic-entry-info {
@@ -1139,16 +805,12 @@ min-width: 0;
 .ic-entry-name-row {
 display: flex;
 align-items: center;
-
 gap: 6px;
-
-min-width: 0;
 }
 
 .ic-entry-name {
 font-size: 13px;
 font-weight: 700;
-
 overflow: hidden;
 text-overflow: ellipsis;
 white-space: nowrap;
@@ -1157,146 +819,103 @@ white-space: nowrap;
 .ic-cat-badge {
 font-size: 9px;
 font-weight: 700;
-
-padding: 3px 7px;
-
-border-radius: 8px;
-
-background: #eee9ff;
-color: #694fd2;
-
+padding: 2px 6px;
+border-radius: 6px;
+background: rgba(45, 212, 191, 0.15);
+color: var(--accent);
 flex-shrink: 0;
 }
 
 .ic-entry-time {
 font-size: 10px;
-
 color: var(--text-dim);
-
 margin-top: 2px;
 }
 
 .ic-entry-scores {
 display: flex;
 flex-wrap: wrap;
-
 gap: 4px;
-
 margin-top: 6px;
 }
 
 .ic-score-chip {
 font-size: 9px;
-
-padding: 3px 6px;
-
-border-radius: 7px;
-
-color: #fff;
-
-font-weight: 600;
-
-white-space: nowrap;
-
-box-shadow:
-0 1px 2px rgba(0,0,0,0.08);
+padding: 2px 6px;
+border-radius: 6px;
+color: #0d1117;
+font-weight: 700;
 }
 
 .ic-entry-del {
-background: #f4f5f7;
-
+background: transparent;
 border: none;
-
-color: #a0a3aa;
-
-width: 32px;
-height: 32px;
-
-border-radius: 10px;
-
-padding: 0;
-
+color: var(--text-dim);
+width: 30px;
+height: 30px;
+border-radius: 8px;
 cursor: pointer;
-
-flex-shrink: 0;
-
 display: flex;
 align-items: center;
 justify-content: center;
-
-transition:
-background 0.15s ease,
-color 0.15s ease;
+transition: all 0.15s ease;
 }
 
 .ic-entry-del:hover {
-background: #fff0ef;
+background: rgba(248, 113, 113, 0.15);
 color: var(--danger);
 }
 
-
-/* =========================================================
-記録追加ボタン
-========================================================= */
-
 .ic-add-btn {
 width: 100%;
-
-border: 1.5px dashed #cbd0d8;
-
-background: #f9fafb;
-
+border: 1px dashed var(--line);
+background: rgba(33, 38, 45, 0.4);
 color: var(--accent);
-
-border-radius: 14px;
-
-padding: 13px;
-
+border-radius: 12px;
+padding: 12px;
 font-size: 13px;
 font-weight: 700;
-
 display: flex;
 align-items: center;
 justify-content: center;
-
 gap: 6px;
-
 cursor: pointer;
-
-margin-top: 5px;
-
-transition:
-background 0.15s ease,
-border-color 0.15s ease,
-transform 0.1s ease;
+margin-top: 6px;
+transition: all 0.15s ease;
 }
 
 .ic-add-btn:hover {
 background: var(--accent-light);
-border-color: #a8c8ff;
+border-color: var(--accent);
 }
-
-.ic-add-btn:active {
-transform: scale(0.98);
-}
-
 
 /* =========================================================
-モーダル / ドロワー
+チャート
 ========================================================= */
+.ic-chart-wrap {
+background: var(--card);
+border: 1px solid var(--line);
+border-radius: 16px;
+padding: 14px 6px 6px;
+box-shadow: var(--shadow);
+}
 
+.ic-empty-msg {
+color: var(--text-dim);
+font-size: 12px;
+text-align: center;
+padding: 30px 10px;
+}
+
+/* =========================================================
+モーダル・入力ドロワー
+========================================================= */
 .ic-overlay {
 position: fixed;
-
 inset: 0;
-
-background: rgba(15,18,25,0.42);
-
+background: rgba(13, 17, 23, 0.7);
 backdrop-filter: blur(4px);
--webkit-backdrop-filter: blur(4px);
-
 z-index: 40;
-
 display: flex;
 align-items: flex-end;
 justify-content: center;
@@ -1304,491 +923,204 @@ justify-content: center;
 
 .ic-drawer {
 width: 100%;
-
 max-width: 520px;
-
-background: #ffffff;
-
-border-top: 1px solid #e4e5e8;
-
-border-radius: 22px 22px 0 0;
-
-padding: 17px 18px 30px;
-
+background: var(--card);
+border: 1px solid var(--line);
+border-radius: 20px 20px 0 0;
+padding: 18px 18px 32px;
 max-height: 88vh;
-
 overflow-y: auto;
-
-box-shadow:
-0 -10px 40px rgba(0,0,0,0.12);
-
-animation: ic-slide-up 0.22s cubic-bezier(.2,.8,.2,1);
-}
-
-@keyframes ic-slide-up {
-from {
-transform: translateY(35px);
-opacity: 0;
-}
-
-to {
-transform: translateY(0);
-opacity: 1;
-}
+box-shadow: 0 -10px 40px rgba(0,0,0,0.6);
 }
 
 .ic-drawer-head {
 display: flex;
-
 justify-content: space-between;
 align-items: center;
-
-margin-bottom: 18px;
+margin-bottom: 16px;
 }
 
 .ic-drawer-title {
 font-size: 18px;
 font-weight: 700;
-
-letter-spacing: -0.3px;
 }
 
 .ic-icon-btn {
 width: 34px;
 height: 34px;
-
-background: #f2f3f5;
-
-border: none;
-
-color: #777b84;
-
+background: var(--panel);
+border: 1px solid var(--line);
+color: var(--text-dim);
 border-radius: 50%;
-
 cursor: pointer;
-
-padding: 0;
-
 display: flex;
 align-items: center;
 justify-content: center;
-
-transition:
-background 0.15s ease,
-color 0.15s ease;
 }
 
 .ic-icon-btn:hover {
-background: #e8e9ed;
 color: var(--text);
+border-color: var(--text-dim);
 }
-
-
-/* =========================================================
-入力フォーム
-========================================================= */
 
 .ic-field-label {
 font-size: 11px;
-
 font-weight: 700;
-
-color: #777b84;
-
+color: var(--text-dim);
 margin-bottom: 8px;
 }
 
 .ic-category-row {
 display: flex;
-
 gap: 8px;
-
-margin-bottom: 18px;
+margin-bottom: 16px;
 }
 
 .ic-category-btn {
 flex: 1;
-
-border: 1px solid #e1e3e7;
-
-background: #f6f7f9;
-
-color: #4f525a;
-
-border-radius: 12px;
-
-padding: 12px 4px;
-
+border: 1px solid var(--line);
+background: var(--panel);
+color: var(--text-dim);
+border-radius: 10px;
+padding: 10px;
 font-size: 13px;
 font-weight: 700;
-
 cursor: pointer;
-
-transition:
-background 0.15s ease,
-color 0.15s ease,
-border-color 0.15s ease,
-transform 0.1s ease;
-}
-
-.ic-category-btn:hover {
-background: #eef1f5;
-}
-
-.ic-category-btn:active {
-transform: scale(0.97);
+transition: all 0.15s ease;
 }
 
 .ic-category-btn.ic-cat-selected {
 background: var(--accent);
-
 border-color: var(--accent);
-
-color: #fff;
-
-box-shadow:
-0 4px 12px rgba(52,120,246,0.22);
+color: #0d1117;
 }
 
 .ic-name-input {
 width: 100%;
-
-border: 1px solid #dfe1e6;
-
-background: #f7f8fa;
-
-border-radius: 12px;
-
-padding: 12px 13px;
-
+border: 1px solid var(--line);
+background: var(--panel);
+border-radius: 10px;
+padding: 11px 12px;
 font-size: 14px;
-
 color: var(--text);
-
-margin-bottom: 20px;
-
-font-family: inherit;
-
-transition:
-border-color 0.15s ease,
-background 0.15s ease,
-box-shadow 0.15s ease;
-}
-
-.ic-name-input::placeholder {
-color: #a4a7af;
+margin-bottom: 18px;
+outline: none;
 }
 
 .ic-name-input:focus {
-outline: none;
-
-background: #fff;
-
 border-color: var(--accent);
-
-box-shadow:
-0 0 0 3px rgba(52,120,246,0.10);
 }
 
-
-/* =========================================================
-スライダー
-========================================================= */
-
 .ic-metric-row {
-margin-bottom: 18px;
+margin-bottom: 16px;
 }
 
 .ic-metric-label-row {
 display: flex;
-
 justify-content: space-between;
-
-margin-bottom: 8px;
-
-font-size: 13px;
+margin-bottom: 6px;
+font-size: 12px;
 font-weight: 600;
 }
 
 .ic-metric-value {
 font-weight: 800;
-
-min-width: 25px;
-
-text-align: right;
-
 color: var(--accent);
 }
 
 .ic-slider {
 -webkit-appearance: none;
 appearance: none;
-
 width: 100%;
-
 height: 6px;
-
 border-radius: 10px;
-
+background: var(--panel);
 outline: none;
-
-background:
-linear-gradient(
-90deg,
-#e4e6ea,
-#dfe2e7
-);
-
 cursor: pointer;
 }
 
 .ic-slider::-webkit-slider-thumb {
 -webkit-appearance: none;
-
-width: 22px;
-height: 22px;
-
+width: 20px;
+height: 20px;
 border-radius: 50%;
-
-background: #fff;
-
+background: var(--text);
 cursor: pointer;
-
 border: 2px solid var(--accent);
-
-box-shadow:
-0 2px 6px rgba(0,0,0,0.18);
-
-transition:
-transform 0.1s ease;
 }
-
-.ic-slider::-webkit-slider-thumb:active {
-transform: scale(1.15);
-}
-
-.ic-slider::-moz-range-thumb {
-width: 22px;
-height: 22px;
-
-border-radius: 50%;
-
-background: #fff;
-
-cursor: pointer;
-
-border: 2px solid var(--accent);
-
-box-shadow:
-0 2px 6px rgba(0,0,0,0.18);
-}
-
-
-/* =========================================================
-ボタン
-========================================================= */
 
 .ic-drawer-actions {
 display: flex;
-
 gap: 10px;
-
 margin-top: 20px;
 }
 
 .ic-btn {
 flex: 1;
-
-border-radius: 12px;
-
-padding: 13px;
-
+border-radius: 10px;
+padding: 12px;
 font-size: 14px;
 font-weight: 700;
-
 border: none;
-
 cursor: pointer;
-
-transition:
-transform 0.1s ease,
-opacity 0.15s ease;
-}
-
-.ic-btn:active {
-transform: scale(0.98);
 }
 
 .ic-btn-save {
 background: var(--accent);
-
-color: #fff;
-
-box-shadow:
-0 5px 14px rgba(52,120,246,0.22);
-}
-
-.ic-btn-save:hover {
-opacity: 0.92;
+color: #0d1117;
 }
 
 .ic-btn-save:disabled {
-background: #b8cbed;
-
+background: #30363d;
+color: var(--text-dim);
 cursor: not-allowed;
-
-box-shadow: none;
 }
 
 .ic-btn-back {
-background: #f0f1f4;
-
-color: #45484f;
+background: var(--panel);
+color: var(--text);
+border: 1px solid var(--line);
 }
-
-.ic-btn-back:hover {
-background: #e8e9ed;
-}
-
-
-/* =========================================================
-保存状態
-========================================================= */
 
 .ic-save-toast {
 text-align: center;
-
 font-size: 10px;
-
 color: var(--text-dim);
-
 margin-top: 10px;
-
 height: 14px;
 }
 
 .ic-storage-warn {
 font-size: 10px;
-
-color: #c76b1f;
-
+color: var(--danger);
 text-align: center;
-
-margin-top: 8px;
+margin-top: 6px;
 }
 
 .ic-req-hint {
 font-size: 10px;
-
-color: #c76b1f;
-
+color: #f87171;
 text-align: center;
-
-margin-top: -5px;
-
 margin-bottom: 10px;
-}
-
-
-/* =========================================================
-スマホ最適化
-========================================================= */
-
-@media (max-width: 380px) {
-
-.ic-root {
-padding-left: 9px;
-padding-right: 9px;
-}
-
-.ic-month {
-font-size: 19px;
-min-width: 110px;
-}
-
-.ic-icon-round {
-width: 33px;
-height: 33px;
-}
-
-.ic-cell {
-min-height: 65px;
-padding-top: 6px;
-}
-
-.ic-cell-day {
-width: 25px;
-height: 25px;
-font-size: 12px;
-}
-
-.ic-entry-card {
-padding: 9px 8px;
-}
-
-.ic-entry-scores {
-gap: 3px;
-}
-
-.ic-score-chip {
-font-size: 8px;
-padding: 3px 5px;
-}
-}
-
-
-/* =========================================================
-スクロールバー
-========================================================= */
-
-.ic-drawer::-webkit-scrollbar {
-width: 5px;
-}
-
-.ic-drawer::-webkit-scrollbar-track {
-background: transparent;
-}
-
-.ic-drawer::-webkit-scrollbar-thumb {
-background: #d5d7dc;
-border-radius: 10px;
-}
-
-
-/* =========================================================
-選択時のアニメーション
-========================================================= */
-
-.ic-cell.ic-selected .ic-cell-day {
-animation: ic-pop 0.16s ease;
-}
-
-@keyframes ic-pop {
-0% {
-transform: scale(0.8);
-}
-
-100% {
-transform: scale(1);
-}
 }
 `}</style>
 
+{/* ヘッダー */}
 <div className="ic-header">
 <div className="ic-nav">
 <button className="ic-nav-btn" onClick={goPrevMonth}>
-<ChevronLeft size={20} />
+<ChevronLeft size={18} />
 </button>
 <div className="ic-month">{monthLabel}</div>
 <button className="ic-nav-btn" onClick={goNextMonth}>
-<ChevronRight size={20} />
+<ChevronRight size={18} />
 </button>
 </div>
 <div className="ic-header-actions">
-<button className="ic-icon-round" onClick={handleExport} aria-label="エクスポート" title="JSONでエクスポート">
+<button className="ic-icon-round" onClick={handleExport} title="JSONでエクスポート">
 <Download size={15} />
 </button>
-<button className="ic-icon-round" onClick={handleImportClick} aria-label="インポート" title="JSONからインポート">
+<button className="ic-icon-round" onClick={handleImportClick} title="JSONからインポート">
 <Upload size={15} />
 </button>
 <input
@@ -1798,7 +1130,7 @@ accept="application/json"
 style={{ display: "none" }}
 onChange={handleImportFile}
 />
-<button className="ic-icon-round" onClick={() => setPrivacyMode((v) => !v)} aria-label="表示切り替え">
+<button className="ic-icon-round" onClick={() => setPrivacyMode((v) => !v)} title="プライバシーモード切替">
 {privacyMode ? <EyeOff size={15} /> : <Eye size={15} />}
 </button>
 </div>
@@ -1871,10 +1203,9 @@ isSelected ? "ic-selected-day" : ""
 <button
 className="ic-help-btn"
 onClick={() => setShowHelp((v) => !v)}
-aria-label="項目の説明"
 title="項目の説明"
 >
-<HelpCircle size={18} />
+<HelpCircle size={16} />
 </button>
 </div>
 
@@ -1882,7 +1213,7 @@ title="項目の説明"
 <div className="ic-help-box">
 {METRICS.map((m) => (
 <div className="ic-help-row" key={m.key}>
-<span className="ic-help-dot" style={{ background: `hsl(${m.hue}, 60%, 50%)` }} />
+<span className="ic-help-dot" style={{ background: `hsl(${m.hue}, 70%, 55%)` }} />
 <div>
 <div className="ic-help-label">{m.label}</div>
 <div className="ic-help-desc">{m.desc}</div>
@@ -1914,7 +1245,7 @@ style={{ width: `${v !== null ? v * 10 : 0}%`, background: heatColor(v) }}
 })}
 <div className="ic-stat-overall">
 平均
-<strong style={{ color: heatColor(dayStats.overall) }}>
+<strong>
 {dayStats.overall !== null ? dayStats.overall.toFixed(1) : "-"}
 </strong>
 </div>
@@ -1948,9 +1279,9 @@ onClick={(e) => {
 e.stopPropagation();
 deleteEntry(selectedDateKey, entry.id);
 }}
-aria-label="削除"
+title="削除"
 >
-<Trash2 size={16} />
+<Trash2 size={15} />
 </button>
 </div>
 );
@@ -1969,11 +1300,11 @@ aria-label="削除"
 ) : (
 <ResponsiveContainer width="100%" height={280}>
 <RadarChart data={radarInfo.data} outerRadius="72%">
-<PolarGrid stroke="#e3e3e7" />
-<PolarAngleAxis dataKey="metric" tick={{ fill: "#1c1c1e", fontSize: 11 }} />
-<PolarRadiusAxis angle={90} domain={[0, 10]} tick={{ fill: "#8a8a8e", fontSize: 10 }} tickCount={6} />
-<Tooltip contentStyle={{ background: "#fff", border: "1px solid #e3e3e7", borderRadius: 8, fontSize: 12 }} />
-<Legend wrapperStyle={{ fontSize: 11, color: "#8a8a8e" }} />
+<PolarGrid stroke="#30363d" />
+<PolarAngleAxis dataKey="metric" tick={{ fill: "#f0f6fc", fontSize: 11 }} />
+<PolarRadiusAxis angle={90} domain={[0, 10]} tick={{ fill: "#8b949e", fontSize: 10 }} tickCount={6} />
+<Tooltip contentStyle={{ background: "#161b22", border: "1px solid #30363d", borderRadius: 8, fontSize: 12, color: "#f0f6fc" }} />
+<Legend wrapperStyle={{ fontSize: 11, color: "#8b949e" }} />
 {radarInfo.weekLabels.map((w, idx) => {
 const hue = WEEK_COLORS[idx % WEEK_COLORS.length];
 return (
@@ -1981,9 +1312,9 @@ return (
 key={w}
 name={`${w}週`}
 dataKey={w}
-stroke={`hsl(${hue}, 60%, 50%)`}
-fill={`hsl(${hue}, 60%, 55%)`}
-fillOpacity={0.12}
+stroke={`hsl(${hue}, 75%, 55%)`}
+fill={`hsl(${hue}, 75%, 55%)`}
+fillOpacity={0.15}
 strokeWidth={2}
 connectNulls
 />
@@ -2001,7 +1332,7 @@ connectNulls
 <div className="ic-drawer-head">
 <div className="ic-drawer-title">{editingId ? "記録を編集" : "新しい記録"}</div>
 <button className="ic-icon-btn" onClick={closeEditor}>
-<X size={20} />
+<X size={18} />
 </button>
 </div>
 
@@ -2042,7 +1373,7 @@ max="10"
 step="1"
 value={draft[m.key]}
 onChange={(e) => setDraft((d) => ({ ...d, [m.key]: Number(e.target.value) }))}
-style={{ accentColor: `hsl(${m.hue}, 60%, 50%)` }}
+style={{ accentColor: `hsl(${m.hue}, 70%, 55%)` }}
 />
 </div>
 ))}
@@ -2067,4 +1398,3 @@ style={{ accentColor: `hsl(${m.hue}, 60%, 50%)` }}
 </div>
 );
 }
-
