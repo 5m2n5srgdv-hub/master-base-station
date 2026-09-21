@@ -20,6 +20,8 @@ Plus,
 Download,
 Upload,
 HelpCircle,
+Sun,
+Moon,
 } from "lucide-react";
 
 // ---- 定数 ----------------------------------------------------------------
@@ -39,9 +41,8 @@ const CATEGORIES = [
 ];
 
 const WEEK_COLORS = [180, 210, 270, 320, 38];
-
 const WEEKDAYS = ["日", "月", "火", "水", "木", "金", "土"];
-const STORAGE_KEY = "entries-v3-dark";
+const STORAGE_KEY = "entries-v3-dynamic-theme";
 const MAX_DOTS = 4;
 const MAX_RADAR_WEEKS = 4;
 
@@ -75,11 +76,10 @@ if (vals.length === 0) return null;
 return vals.reduce((a, b) => a + b, 0) / vals.length;
 }
 
-// 0(冷)→10(熱) を ダークモード映えする hsl で補間
 function heatColor(avg) {
-if (avg === null || avg === undefined) return "#3a3f4b";
+if (avg === null || avg === undefined) return "var(--dot-empty)";
 const t = Math.max(0, Math.min(10, avg)) / 10;
-const hue = 190 - t * 175; // 190(シアン) → 15(オレンジ)
+const hue = 190 - t * 175;
 const sat = 70 + t * 15;
 const light = 50 + t * 5;
 return `hsl(${hue.toFixed(0)}, ${sat.toFixed(0)}%, ${light.toFixed(0)}%)`;
@@ -135,6 +135,10 @@ const [entries, setEntries] = useState({});
 const [loading, setLoading] = useState(true);
 const [privacyMode, setPrivacyMode] = useState(false);
 
+// テーマ設定（'system', 'light', 'dark'）
+const [themeMode, setThemeMode] = useState("system");
+const [isDark, setIsDark] = useState(false);
+
 const [selectedDateKey, setSelectedDateKey] = useState(null);
 const [showHelp, setShowHelp] = useState(false);
 const [editingId, setEditingId] = useState(null);
@@ -145,6 +149,23 @@ const [saveState, setSaveState] = useState("idle");
 const [storageError, setStorageError] = useState(false);
 const [backupMsg, setBackupMsg] = useState("");
 const fileInputRef = useRef(null);
+
+// システムのダークモード変更を監視・反映
+useEffect(() => {
+const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+
+const updateTheme = () => {
+if (themeMode === "system") {
+setIsDark(mediaQuery.matches);
+} else {
+setIsDark(themeMode === "dark");
+}
+};
+
+updateTheme();
+mediaQuery.addEventListener("change", updateTheme);
+return () => mediaQuery.removeEventListener("change", updateTheme);
+}, [themeMode]);
 
 const weeks = useMemo(() => buildMonthMatrix(viewYear, viewMonth), [viewYear, viewMonth]);
 
@@ -171,9 +192,7 @@ try {
 localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
 setSaveState("saved");
 setStorageError(false);
-setTimeout(() => {
-setSaveState("idle");
-}, 1000);
+setTimeout(() => setSaveState("idle"), 1000);
 } catch (e) {
 console.error("データの保存に失敗しました:", e);
 setStorageError(true);
@@ -254,9 +273,7 @@ setBackupMsg("エクスポートしました");
 setTimeout(() => setBackupMsg(""), 2000);
 };
 
-const handleImportClick = () => {
-fileInputRef.current?.click();
-};
+const handleImportClick = () => fileInputRef.current?.click();
 
 const handleImportFile = (e) => {
 const file = e.target.files?.[0];
@@ -351,18 +368,40 @@ const overall = overallVals.length ? overallVals.reduce((a, b) => a + b, 0) / ov
 return { perMetric, overall };
 }, [selectedList]);
 
+// テーマ切替のトグル処理
+const cycleTheme = () => {
+if (themeMode === "system") setThemeMode("light");
+else if (themeMode === "light") setThemeMode("dark");
+else setThemeMode("system");
+};
+
 return (
-<div className="ic-root">
+<div className={`ic-root ${isDark ? "theme-dark" : "theme-light"}`}>
 <style>{`
 @import url('https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;600;700&display=swap');
 
 /* =========================================================
-全体（B：モダン・ダークモード仕様）
+テーマ変数定義（ライト / ダーク）
 ========================================================= */
-.ic-root {
+.ic-root.theme-light {
+--bg: #f8fafc;
+--card: #ffffff;
+--panel: #f1f5f9;
+--line: #e2e8f0;
+--text: #0f172a;
+--text-dim: #64748b;
+--accent: #0d9488;
+--accent-light: rgba(13, 148, 136, 0.1);
+--danger: #ef4444;
+--shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+--cell-bg: #ffffff;
+--cell-hover: #f8fafc;
+--dot-empty: #cbd5e1;
+}
+
+.ic-root.theme-dark {
 --bg: #0d1117;
 --card: #161b22;
---card-solid: #161b22;
 --panel: #21262d;
 --line: #30363d;
 --text: #f0f6fc;
@@ -371,7 +410,12 @@ return (
 --accent-light: rgba(45, 212, 191, 0.12);
 --danger: #f87171;
 --shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+--cell-bg: rgba(22, 27, 34, 0.6);
+--cell-hover: #21262d;
+--dot-empty: #3a3f4b;
+}
 
+.ic-root {
 font-family: 'Zen Kaku Gothic New', -apple-system, BlinkMacSystemFont, sans-serif;
 background: var(--bg);
 color: var(--text);
@@ -382,6 +426,7 @@ box-sizing: border-box;
 max-width: 520px;
 margin: 0 auto;
 position: relative;
+transition: background 0.25s ease, color 0.25s ease;
 }
 
 .ic-root * {
@@ -426,7 +471,6 @@ transition: all 0.15s ease;
 .ic-nav-btn:hover {
 background: var(--panel);
 color: var(--text);
-border-color: #484f58;
 }
 
 .ic-month {
@@ -463,13 +507,10 @@ color: var(--accent);
 border-color: var(--accent);
 }
 
-/* =========================================================
-通知・プライバシー
-========================================================= */
 .ic-backup-toast {
 background: var(--accent-light);
 color: var(--accent);
-border: 1px solid rgba(45, 212, 191, 0.3);
+border: 1px solid var(--accent);
 border-radius: 10px;
 padding: 7px 10px;
 margin: 0 auto 12px;
@@ -504,8 +545,8 @@ font-weight: 600;
 color: var(--text-dim);
 }
 
-.ic-weekday.ic-sun { color: #f87171; }
-.ic-weekday.ic-sat { color: #60a5fa; }
+.ic-weekday.ic-sun { color: var(--danger); }
+.ic-weekday.ic-sat { color: #3b82f6; }
 
 .ic-grid {
 display: grid;
@@ -527,21 +568,21 @@ cursor: pointer;
 display: flex;
 flex-direction: column;
 align-items: center;
-background: rgba(22, 27, 34, 0.6);
+background: var(--cell-bg);
 transition: background 0.12s ease;
 }
 
 .ic-cell:hover {
-background: var(--panel);
+background: var(--cell-hover);
 }
 
 .ic-cell.ic-empty {
 cursor: default;
-background: #0d1117;
+background: var(--bg);
 }
 
 .ic-cell.ic-selected {
-background: rgba(45, 212, 191, 0.08);
+background: var(--accent-light);
 }
 
 .ic-cell-day {
@@ -556,12 +597,12 @@ border-radius: 50%;
 color: var(--text);
 }
 
-.ic-cell-day.ic-sun { color: #f87171; }
-.ic-cell-day.ic-sat { color: #60a5fa; }
+.ic-cell-day.ic-sun { color: var(--danger); }
+.ic-cell-day.ic-sat { color: #3b82f6; }
 
 .ic-cell-day.ic-today {
 background: var(--accent);
-color: #0d1117;
+color: var(--card);
 font-weight: 700;
 }
 
@@ -571,7 +612,7 @@ color: var(--accent);
 }
 
 .ic-cell-day.ic-selected-day.ic-today {
-color: #0d1117;
+color: var(--card);
 background: var(--accent);
 }
 
@@ -612,7 +653,7 @@ background: linear-gradient(90deg, #38bdf8, #2dd4bf, #a3e635, #fbbf24, #f87171);
 }
 
 /* =========================================================
-選択日の詳細パネル
+パネル・カード
 ========================================================= */
 .ic-day-panel {
 margin-top: 18px;
@@ -721,7 +762,7 @@ font-size: 11px;
 .ic-stat-bar-track {
 height: 6px;
 border-radius: 10px;
-background: #30363d;
+background: var(--line);
 overflow: hidden;
 }
 
@@ -752,9 +793,6 @@ font-size: 18px;
 color: var(--accent);
 }
 
-/* =========================================================
-カード・リスト
-========================================================= */
 .ic-section-title {
 font-size: 15px;
 font-weight: 700;
@@ -821,7 +859,7 @@ font-size: 9px;
 font-weight: 700;
 padding: 2px 6px;
 border-radius: 6px;
-background: rgba(45, 212, 191, 0.15);
+background: var(--accent-light);
 color: var(--accent);
 flex-shrink: 0;
 }
@@ -843,7 +881,7 @@ margin-top: 6px;
 font-size: 9px;
 padding: 2px 6px;
 border-radius: 6px;
-color: #0d1117;
+color: #ffffff;
 font-weight: 700;
 }
 
@@ -862,14 +900,14 @@ transition: all 0.15s ease;
 }
 
 .ic-entry-del:hover {
-background: rgba(248, 113, 113, 0.15);
+background: rgba(239, 68, 68, 0.15);
 color: var(--danger);
 }
 
 .ic-add-btn {
 width: 100%;
 border: 1px dashed var(--line);
-background: rgba(33, 38, 45, 0.4);
+background: var(--panel);
 color: var(--accent);
 border-radius: 12px;
 padding: 12px;
@@ -889,9 +927,6 @@ background: var(--accent-light);
 border-color: var(--accent);
 }
 
-/* =========================================================
-チャート
-========================================================= */
 .ic-chart-wrap {
 background: var(--card);
 border: 1px solid var(--line);
@@ -913,7 +948,7 @@ padding: 30px 10px;
 .ic-overlay {
 position: fixed;
 inset: 0;
-background: rgba(13, 17, 23, 0.7);
+background: rgba(0, 0, 0, 0.5);
 backdrop-filter: blur(4px);
 z-index: 40;
 display: flex;
@@ -930,7 +965,7 @@ border-radius: 20px 20px 0 0;
 padding: 18px 18px 32px;
 max-height: 88vh;
 overflow-y: auto;
-box-shadow: 0 -10px 40px rgba(0,0,0,0.6);
+box-shadow: 0 -10px 40px rgba(0,0,0,0.3);
 }
 
 .ic-drawer-head {
@@ -992,7 +1027,7 @@ transition: all 0.15s ease;
 .ic-category-btn.ic-cat-selected {
 background: var(--accent);
 border-color: var(--accent);
-color: #0d1117;
+color: #ffffff;
 }
 
 .ic-name-input {
@@ -1034,7 +1069,7 @@ appearance: none;
 width: 100%;
 height: 6px;
 border-radius: 10px;
-background: var(--panel);
+background: var(--line);
 outline: none;
 cursor: pointer;
 }
@@ -1067,11 +1102,11 @@ cursor: pointer;
 
 .ic-btn-save {
 background: var(--accent);
-color: #0d1117;
+color: #ffffff;
 }
 
 .ic-btn-save:disabled {
-background: #30363d;
+background: var(--line);
 color: var(--text-dim);
 cursor: not-allowed;
 }
@@ -1099,7 +1134,7 @@ margin-top: 6px;
 
 .ic-req-hint {
 font-size: 10px;
-color: #f87171;
+color: var(--danger);
 text-align: center;
 margin-bottom: 10px;
 }
@@ -1117,10 +1152,18 @@ margin-bottom: 10px;
 </button>
 </div>
 <div className="ic-header-actions">
-<button className="ic-icon-round" onClick={handleExport} title="JSONでエクスポート">
+{/* テーマ手動切替ボタン */}
+<button
+className="ic-icon-round"
+onClick={cycleTheme}
+title={`テーマ切替 (現在: ${themeMode === "system" ? "自動" : themeMode === "dark" ? "ダーク" : "ライト"})`}
+>
+{themeMode === "dark" ? <Moon size={15} /> : themeMode === "light" ? <Sun size={15} /> : (isDark ? <Moon size={15} /> : <Sun size={15} />)}
+</button>
+<button className="ic-icon-round" onClick={handleExport} title="エクスポート">
 <Download size={15} />
 </button>
-<button className="ic-icon-round" onClick={handleImportClick} title="JSONからインポート">
+<button className="ic-icon-round" onClick={handleImportClick} title="インポート">
 <Upload size={15} />
 </button>
 <input
@@ -1130,7 +1173,7 @@ accept="application/json"
 style={{ display: "none" }}
 onChange={handleImportFile}
 />
-<button className="ic-icon-round" onClick={() => setPrivacyMode((v) => !v)} title="プライバシーモード切替">
+<button className="ic-icon-round" onClick={() => setPrivacyMode((v) => !v)} title="プライバシーモード">
 {privacyMode ? <EyeOff size={15} /> : <Eye size={15} />}
 </button>
 </div>
@@ -1300,11 +1343,11 @@ title="削除"
 ) : (
 <ResponsiveContainer width="100%" height={280}>
 <RadarChart data={radarInfo.data} outerRadius="72%">
-<PolarGrid stroke="#30363d" />
-<PolarAngleAxis dataKey="metric" tick={{ fill: "#f0f6fc", fontSize: 11 }} />
-<PolarRadiusAxis angle={90} domain={[0, 10]} tick={{ fill: "#8b949e", fontSize: 10 }} tickCount={6} />
-<Tooltip contentStyle={{ background: "#161b22", border: "1px solid #30363d", borderRadius: 8, fontSize: 12, color: "#f0f6fc" }} />
-<Legend wrapperStyle={{ fontSize: 11, color: "#8b949e" }} />
+<PolarGrid stroke={isDark ? "#30363d" : "#e2e8f0"} />
+<PolarAngleAxis dataKey="metric" tick={{ fill: isDark ? "#f0f6fc" : "#0f172a", fontSize: 11 }} />
+<PolarRadiusAxis angle={90} domain={[0, 10]} tick={{ fill: isDark ? "#8b949e" : "#64748b", fontSize: 10 }} tickCount={6} />
+<Tooltip contentStyle={{ background: isDark ? "#161b22" : "#ffffff", border: `1px solid ${isDark ? "#30363d" : "#e2e8f0"}`, borderRadius: 8, fontSize: 12, color: isDark ? "#f0f6fc" : "#0f172a" }} />
+<Legend wrapperStyle={{ fontSize: 11, color: isDark ? "#8b949e" : "#64748b" }} />
 {radarInfo.weekLabels.map((w, idx) => {
 const hue = WEEK_COLORS[idx % WEEK_COLORS.length];
 return (
@@ -1353,7 +1396,7 @@ onClick={() => setDraft((d) => ({ ...d, category: c.key }))}
 <input
 className="ic-name-input"
 type="text"
-placeholder="記録の名前(任意) 例:女優名、作品名、人物"
+placeholder="記録の名前(任意)"
 value={draft.name}
 onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))}
 maxLength={40}
@@ -1391,7 +1434,7 @@ style={{ accentColor: `hsl(${m.hue}, 70%, 55%)` }}
 <div className="ic-save-toast">
 {saveState === "saving" ? "保存中…" : saveState === "saved" ? "保存しました" : ""}
 </div>
-{storageError && <div className="ic-storage-warn">保存に失敗しました。もう一度お試しください。</div>}
+{storageError && <div className="ic-storage-warn">保存に失敗しました。</div>}
 </div>
 </div>
 )}
