@@ -151,6 +151,8 @@ URL.revokeObjectURL(url);
 
 export default function App() {
 const today = new Date();
+const streek = calculateStreak(entries);
+  
 const [viewYear, setViewYear] = useState(today.getFullYear());
 const [viewMonth, setViewMonth] = useState(today.getMonth());
 const [entries, setEntries] = useState({});
@@ -527,6 +529,49 @@ transition: all 0.15s ease;
 background: var(--panel);
 color: var(--accent);
 border-color: var(--accent);
+}
+
+
+/* =========================================================
+ストリーク表示
+========================================================= */
+.ic-streak-card {
+background: var(--card);
+border: 1px solid var(--line);
+border-radius: 14px;
+padding: 12px 14px;
+margin-bottom: 14px;
+display: flex;
+align-items: center;
+justify-content: space-between;
+box-shadow: var(--shadow);
+}
+
+.ic-streak-left {
+display: flex;
+align-items: center;
+gap: 10px;
+}
+
+.ic-streak-fire {
+font-size: 22px;
+line-height: 1;
+}
+
+.ic-streak-label {
+font-size: 11px;
+color: var(--text-dim);
+}
+
+.ic-streak-number {
+font-size: 20px;
+font-weight: 800;
+color: var(--accent);
+}
+
+.ic-streak-days {
+font-size: 11px;
+color: var(--text-dim);
 }
 
 .ic-backup-toast {
@@ -1204,6 +1249,24 @@ onChange={handleImportFile}
 {backupMsg && <div className="ic-backup-toast">{backupMsg}</div>}
 
 <div className={privacyMode ? "ic-blurred" : ""}>
+
+ {backupMsg && <div className="ic-backup-toast">{backupMsg}</div>}
+
+<div className={privacyMode ? "ic-blurred" : ""}>
+
+<div className="ic-streak-card">
+<div className="ic-streak-left">
+<span className="ic-streak-fire">🔥</span>
+<div>
+<div className="ic-streak-label">連続記録</div>
+<div className="ic-streak-number">{streak}日</div>
+</div>
+</div>
+<div className="ic-streak-days">
+{streak > 0 ? "継続中！" : "記録を始めよう"}
+</div>
+</div> 
+
 <div className="ic-weekday-row">
 {WEEKDAYS.map((w, i) => (
 <div className={`ic-weekday ${i === 0 ? "ic-sun" : i === 6 ? "ic-sat" : ""}`} key={w}>
