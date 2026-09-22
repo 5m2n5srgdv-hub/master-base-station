@@ -54,6 +54,28 @@ const m = String(date.getMonth() + 1).padStart(2, "0");
 const d = String(date.getDate()).padStart(2, "0");
 return `${y}-${m}-${d}`;
 }
+// --- ストリーク計算ロジックの例 ---
+function calculateStreak(entries) {
+let streak = 0;
+const today = new Date();
+
+// 今日から過去に向かって何日連続でエントリが存在するかチェック
+for (let i = 0; i < 365; i++) {
+const d = new Date(today);
+d.setDate(today.getDate() - i);
+const key = formatDateKey(d);
+
+if (entries[key] && entries[key].length > 0) {
+streak++;
+} else if (i === 0) {
+// 「今日」まだ記録していなくても、昨日の時点で連続していれば途切れさせない判定にする場合
+continue;
+} else {
+break;
+}
+}
+return streak;
+}
 
 function buildMonthMatrix(year, month) {
 const firstDay = new Date(year, month, 1);
