@@ -1255,16 +1255,16 @@ onChange={handleImportFile}
 <div className={privacyMode ? "ic-blurred" : ""}>
 
 <div className="ic-streak-card">
-<div className="ic-streak-left">
-<span className="ic-streak-fire">🔥</span>
-<div>
-<div className="ic-streak-label">連続記録</div>
-<div className="ic-streak-number">{streak}日</div>
-</div>
-</div>
-<div className="ic-streak-days">
-{streak > 0 ? "継続中！" : "記録を始めよう"}
-</div>
+ <div className="ic-streak-left">
+   <span className="ic-streak-fire">🔥</span>
+   <div>
+      <div className="ic-streak-label">連続記録</div>
+      <div className="ic-streak-number">{streak}日</div>
+   </div>
+ </div>
+ <div className="ic-streak-days">
+   {streak > 0 ? "継続中！" : "記録を始めよう"}
+ </div>
 </div> 
 
 <div className="ic-weekday-row">
