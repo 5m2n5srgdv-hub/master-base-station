@@ -151,11 +151,12 @@ URL.revokeObjectURL(url);
 
 export default function App() {
 const today = new Date();
-const streek = calculateStreak(entries);
   
 const [viewYear, setViewYear] = useState(today.getFullYear());
 const [viewMonth, setViewMonth] = useState(today.getMonth());
 const [entries, setEntries] = useState({});
+
+const streek = calculateStreak(entries); 
 const [loading, setLoading] = useState(true);
 const [privacyMode, setPrivacyMode] = useState(false);
 
@@ -1245,10 +1246,6 @@ onChange={handleImportFile}
 </button>
 </div>
 </div>
-
-{backupMsg && <div className="ic-backup-toast">{backupMsg}</div>}
-
-<div className={privacyMode ? "ic-blurred" : ""}>
 
  {backupMsg && <div className="ic-backup-toast">{backupMsg}</div>}
 
