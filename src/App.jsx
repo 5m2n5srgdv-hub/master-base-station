@@ -156,7 +156,7 @@ const [viewYear, setViewYear] = useState(today.getFullYear());
 const [viewMonth, setViewMonth] = useState(today.getMonth());
 const [entries, setEntries] = useState({});
 
-const streek = calculateStreak(entries); 
+const streak = calculateStreak(entries); 
   
 const [loading, setLoading] = useState(true);
 const [privacyMode, setPrivacyMode] = useState(false);
